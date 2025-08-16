@@ -390,7 +390,7 @@ GameObject:
   - component: {fileID: 155092007}
   - component: {fileID: 155092006}
   m_Layer: 5
-  m_Name: Button_Up_1
+  m_Name: UpArrow_0
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -510,7 +510,7 @@ GameObject:
   - component: {fileID: 190833314}
   - component: {fileID: 190833313}
   m_Layer: 5
-  m_Name: Button_Down_2
+  m_Name: DownArrow_1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1073,7 +1073,7 @@ GameObject:
   - component: {fileID: 586187160}
   - component: {fileID: 586187159}
   m_Layer: 5
-  m_Name: Button_Left_1
+  m_Name: LeftArrow_0
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1193,7 +1193,7 @@ GameObject:
   - component: {fileID: 592099429}
   - component: {fileID: 592099428}
   m_Layer: 5
-  m_Name: Button_Right_3
+  m_Name: RightArrow_2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1395,7 +1395,7 @@ GameObject:
   - component: {fileID: 647977091}
   - component: {fileID: 647977090}
   m_Layer: 5
-  m_Name: Button_Up_3
+  m_Name: UpArrow_2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1515,7 +1515,7 @@ GameObject:
   - component: {fileID: 730237831}
   - component: {fileID: 730237830}
   m_Layer: 5
-  m_Name: Button_Right_1
+  m_Name: RightArrow_0
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1769,7 +1769,7 @@ GameObject:
   - component: {fileID: 771324039}
   - component: {fileID: 771324038}
   m_Layer: 5
-  m_Name: Button_Left_3
+  m_Name: LeftArrow_2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2350,7 +2350,7 @@ GameObject:
   - component: {fileID: 1285555152}
   - component: {fileID: 1285555151}
   m_Layer: 5
-  m_Name: Button_Right_2
+  m_Name: RightArrow_1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2470,7 +2470,7 @@ GameObject:
   - component: {fileID: 1516969081}
   - component: {fileID: 1516969080}
   m_Layer: 5
-  m_Name: Button_Down_3
+  m_Name: DownArrow_2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2590,7 +2590,7 @@ GameObject:
   - component: {fileID: 1601175758}
   - component: {fileID: 1601175757}
   m_Layer: 5
-  m_Name: Button_Left_2
+  m_Name: LeftArrow_1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2710,7 +2710,7 @@ GameObject:
   - component: {fileID: 1602505150}
   - component: {fileID: 1602505149}
   m_Layer: 5
-  m_Name: Button_Down_1
+  m_Name: DownArrow_0
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3065,6 +3065,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Osprite: {fileID: -7627845712019329699, guid: 236587ec711348a4792e0060efb1bf73, type: 3}
   Xsprite: {fileID: -796012600723145568, guid: 236587ec711348a4792e0060efb1bf73, type: 3}
+  Defaultsprite: {fileID: 7477975601068189545, guid: 236587ec711348a4792e0060efb1bf73, type: 3}
 --- !u!1 &1935443071
 GameObject:
   m_ObjectHideFlags: 0
@@ -3078,7 +3079,7 @@ GameObject:
   - component: {fileID: 1935443074}
   - component: {fileID: 1935443073}
   m_Layer: 5
-  m_Name: Button_Up_2
+  m_Name: UpArrow_1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
