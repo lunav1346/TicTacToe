@@ -11,8 +11,16 @@ public class TicTacToeScript : MonoBehaviour
     public Sprite Defaultsprite;
     Button[] tictactoeButtons = new Button[9];
     GameObject TurnText;
-    GameObject ScoreText;
+    // GameObject ScoreText;
     TextMeshProUGUI RoundText;
+    TextMeshProUGUI RobotText;
+
+    // 일시정지 메뉴 UI 요소들
+    GameObject PauseMenuPanel;
+    GameObject ConfirmQuitPanel;
+    bool isPaused = false;
+
+    // GameObject RoundTextObject;
     string[] buttonName = {
         "Button_0", "Button_1", "Button_2" ,
         "Button_3", "Button_4", "Button_5" ,
@@ -20,18 +28,54 @@ public class TicTacToeScript : MonoBehaviour
     };
     Button[] pushLineButtons = new Button[12];
     string[] pushLineButtonsName = {
-    "UpArrow_0", "UpArrow_1", "UpArrow_2",      // 위쪽 화살표 3개
-    "DownArrow_0", "DownArrow_1", "DownArrow_2", // 아래쪽 화살표 3개
-    "LeftArrow_0", "LeftArrow_1", "LeftArrow_2",  // 왼쪽 화살표 3개
-    "RightArrow_0", "RightArrow_1", "RightArrow_2" // 오른쪽 화살표 3개
+    "UpArrow_0", "UpArrow_1", "UpArrow_2",
+    "DownArrow_0", "DownArrow_1", "DownArrow_2",
+    "LeftArrow_0", "LeftArrow_1", "LeftArrow_2",
+    "RightArrow_0", "RightArrow_1", "RightArrow_2"
 };
 
     bool isImFirst;
     bool isMyTurn;
+    bool isFirstWin = false;
+    bool isSecondWin = false;
     bool isFinishRound = false;
     int[] gameBoard = new int[9];
+    int currentRound = 1;
 
-    // gameBoard를 2차원 배열로 바꿔주는 함수
+    // 로봇 대사 배열들
+    string[] roundStartDialogues = {
+        "시스템 가동. 라운드를 시작하겠습니다.",
+        "전략 분석 중... 준비되셨습니까?",
+        "연산 시작. 최선을 다하시길 바랍니다.",
+        "초기화 완료. 게임을 시작합니다.",
+        "준비 완료. 대결을 시작하죠."
+    };
+
+    string[] playerWinDialogues = {
+        "분석 결과... 당신의 승리입니다.",
+        "흥미롭군요. 당신이 이겼습니다.",
+        "시스템 오류... 아니, 당신의 실력이군요.",
+        "예상 밖의 결과입니다. 승리를 축하합니다.",
+        "계산 완료. 당신의 승리를 인정합니다."
+    };
+
+    string[] playerLoseDialogues = {
+        "안타깝습니다. 처음부터 다시 시작하죠.",
+        "오류 감지. 라운드 1로 돌아갑니다.",
+        "재부팅이 필요합니다. 초기화합니다.",
+        "실패를 분석 중... 다시 시작하겠습니다.",
+        "시스템 복구 중. 처음부터 다시입니다."
+    };
+
+    string[] finalWinDialogues = {
+        "모든 연산 종료. 당신의 완전한 승리입니다.",
+        "시스템 종료... 당신은 진정한 승자입니다.",
+        "분석 불가... 놀라운 실력입니다. 축하합니다!",
+        "최종 결과 확정. 당신의 승리를 기록합니다.",
+        "프로그램 종료. 경의를 표합니다."
+    };
+
+
     int GetGameBoardValue(int row, int col)
     {
         int index = row * 3 + col;
@@ -73,9 +117,50 @@ public class TicTacToeScript : MonoBehaviour
         }
     }
 
+    // 로봇 대사 표시 함수 - 라운드 시작 시
+    void ShowRoundStartDialogue()
+    {
+        int randomIndex = Random.Range(0, roundStartDialogues.Length);
+        RobotText.text = roundStartDialogues[randomIndex];
+        Debug.Log($"로봇 대사: {roundStartDialogues[randomIndex]}");
+    }
+
+    // 로봇 대사 표시 함수 - 라운드 종료 시
+    void ShowRoundEndDialogue(bool playerWon, bool isFinalRound)
+    {
+        string dialogue;
+
+        if (isFinalRound && playerWon)
+        {
+            // 8라운드 승리 (최종 승리)
+            int randomIndex = Random.Range(0, finalWinDialogues.Length);
+            dialogue = finalWinDialogues[randomIndex];
+        }
+        else if (playerWon)
+        {
+            // 일반 라운드 승리
+            int randomIndex = Random.Range(0, playerWinDialogues.Length);
+            dialogue = playerWinDialogues[randomIndex];
+        }
+        else
+        {
+            // 패배
+            int randomIndex = Random.Range(0, playerLoseDialogues.Length);
+            dialogue = playerLoseDialogues[randomIndex];
+        }
+
+        RobotText.text = dialogue;
+        Debug.Log($"로봇 대사: {dialogue}");
+    }
+
     // 틱택토시 버튼 클릭
     public void OnButtonClick(int buttonIndex)
     {
+        if (isFirstWin || isSecondWin)
+        {
+            Debug.Log("게임이 이미 종료되었습니다.");
+            return;
+        }
         // Debug.Log($"{buttonIndex} is clicked");
         if (isImFirst && isMyTurn && gameBoard[buttonIndex] == 0) // 내가 O & 내턴 & 비어있는 칸
         {
@@ -266,14 +351,8 @@ public class TicTacToeScript : MonoBehaviour
         return RandomMarking(EmptySlots);
     }
 
-    // 컴퓨터 로직 - 복합적 의사결정 개발예정
-    // public int HybridMarking(int[] EmptySlots)
-    // {
-
-    // }
-
-    // 틱택토 체크 로직
-    public void CheckWhoWin(int[] gameBoard)
+    // 승패 여부 체크
+    void CheckWhoWin(int[] gameBoard)
     {
         // 가로줄 확인
         if (GetGameBoardValue(0, 0) == GetGameBoardValue(0, 1) && GetGameBoardValue(0, 1) == GetGameBoardValue(0, 2) && GetGameBoardValue(0, 0) != 0)
@@ -281,105 +360,245 @@ public class TicTacToeScript : MonoBehaviour
             if (GetGameBoardValue(0, 0) == 1)
             {
                 Debug.Log("First Win!");
+                isFirstWin = true;
                 isFinishRound = true;
+                HandleRoundEnd(); // 라운드 종료 처리
+                return;
             }
             else
             {
                 Debug.Log("Second Win!");
+                isSecondWin = true;
                 isFinishRound = true;
+                HandleRoundEnd(); // 라운드 종료 처리
+                return;
             }
         }
-        else if (GetGameBoardValue(1, 0) == GetGameBoardValue(1, 1) && GetGameBoardValue(1, 1) == GetGameBoardValue(1, 2) && GetGameBoardValue(1, 0) != 0)
+        if (GetGameBoardValue(1, 0) == GetGameBoardValue(1, 1) && GetGameBoardValue(1, 1) == GetGameBoardValue(1, 2) && GetGameBoardValue(1, 0) != 0)
         {
             if (GetGameBoardValue(1, 0) == 1)
             {
                 Debug.Log("First Win!");
+                isFirstWin = true;
                 isFinishRound = true;
+                HandleRoundEnd(); // 라운드 종료 처리
+                return;
             }
             else
             {
                 Debug.Log("Second Win!");
+                isSecondWin = true;
                 isFinishRound = true;
+                HandleRoundEnd(); // 라운드 종료 처리
+                return;
             }
         }
-        else if (GetGameBoardValue(2, 0) == GetGameBoardValue(2, 1) && GetGameBoardValue(2, 1) == GetGameBoardValue(2, 2) && GetGameBoardValue(2, 0) != 0)
+        if (GetGameBoardValue(2, 0) == GetGameBoardValue(2, 1) && GetGameBoardValue(2, 1) == GetGameBoardValue(2, 2) && GetGameBoardValue(2, 0) != 0)
         {
             if (GetGameBoardValue(2, 0) == 1)
             {
                 Debug.Log("First Win!");
+                isFirstWin = true;
                 isFinishRound = true;
+                HandleRoundEnd(); // 라운드 종료 처리
+                return;
             }
             else
             {
                 Debug.Log("Second Win!");
+                isSecondWin = true;
                 isFinishRound = true;
+                HandleRoundEnd(); // 라운드 종료 처리
+                return;
             }
         }
         // 세로줄 확인
-        else if (GetGameBoardValue(0, 0) == GetGameBoardValue(1, 0) && GetGameBoardValue(1, 0) == GetGameBoardValue(2, 0) && GetGameBoardValue(0, 0) != 0)
+        if (GetGameBoardValue(0, 0) == GetGameBoardValue(1, 0) && GetGameBoardValue(1, 0) == GetGameBoardValue(2, 0) && GetGameBoardValue(0, 0) != 0)
         {
             if (GetGameBoardValue(0, 0) == 1)
             {
                 Debug.Log("First Win!");
+                isFirstWin = true;
                 isFinishRound = true;
+                HandleRoundEnd(); // 라운드 종료 처리
+                return;
             }
             else
             {
                 Debug.Log("Second Win!");
+                isSecondWin = true;
                 isFinishRound = true;
+                HandleRoundEnd(); // 라운드 종료 처리
+                return;
             }
         }
-        else if (GetGameBoardValue(0, 1) == GetGameBoardValue(1, 1) && GetGameBoardValue(1, 1) == GetGameBoardValue(2, 1) && GetGameBoardValue(0, 1) != 0)
+        if (GetGameBoardValue(0, 1) == GetGameBoardValue(1, 1) && GetGameBoardValue(1, 1) == GetGameBoardValue(2, 1) && GetGameBoardValue(0, 1) != 0)
         {
             if (GetGameBoardValue(0, 1) == 1)
             {
                 Debug.Log("First Win!");
+                isFirstWin = true;
                 isFinishRound = true;
+                HandleRoundEnd(); // 라운드 종료 처리
+                return;
             }
             else
             {
                 Debug.Log("Second Win!");
+                isSecondWin = true;
                 isFinishRound = true;
+                HandleRoundEnd(); // 라운드 종료 처리
+                return;
             }
         }
-        else if (GetGameBoardValue(0, 2) == GetGameBoardValue(1, 2) && GetGameBoardValue(1, 2) == GetGameBoardValue(2, 2) && GetGameBoardValue(0, 2) != 0)
+        if (GetGameBoardValue(0, 2) == GetGameBoardValue(1, 2) && GetGameBoardValue(1, 2) == GetGameBoardValue(2, 2) && GetGameBoardValue(0, 2) != 0)
         {
             if (GetGameBoardValue(0, 2) == 1)
             {
                 Debug.Log("First Win!");
+                isFirstWin = true;
+                isFinishRound = true;
+                HandleRoundEnd(); // 라운드 종료 처리
+                return;
             }
             else
             {
                 Debug.Log("Second Win!");
+                isSecondWin = true;
+                isFinishRound = true;
+                HandleRoundEnd(); // 라운드 종료 처리
+                return;
             }
         }
         // 대각선 체크
-        else if (GetGameBoardValue(0, 0) == GetGameBoardValue(1, 1) && GetGameBoardValue(1, 1) == GetGameBoardValue(2, 2) && GetGameBoardValue(0, 0) != 0)
+        if (GetGameBoardValue(0, 0) == GetGameBoardValue(1, 1) && GetGameBoardValue(1, 1) == GetGameBoardValue(2, 2) && GetGameBoardValue(0, 0) != 0)
         {
             if (GetGameBoardValue(0, 0) == 1)
             {
                 Debug.Log("First Win!");
+                isFirstWin = true;
+                isFinishRound = true;
+                HandleRoundEnd(); // 라운드 종료 처리
+                return;
             }
             else
             {
                 Debug.Log("Second Win!");
+                isSecondWin = true;
+                isFinishRound = true;
+                HandleRoundEnd(); // 라운드 종료 처리
+                return;
             }
         }
-        else if (GetGameBoardValue(0, 2) == GetGameBoardValue(1, 1) && GetGameBoardValue(1, 1) == GetGameBoardValue(2, 0) && GetGameBoardValue(0, 2) != 0)
+        if (GetGameBoardValue(0, 2) == GetGameBoardValue(1, 1) && GetGameBoardValue(1, 1) == GetGameBoardValue(2, 0) && GetGameBoardValue(0, 2) != 0)
         {
             if (GetGameBoardValue(0, 2) == 1)
             {
                 Debug.Log("First Win!");
+                isFirstWin = true;
+                isFinishRound = true;
+                HandleRoundEnd(); // 라운드 종료 처리
+                return;
             }
             else
             {
                 Debug.Log("Second Win!");
+                isSecondWin = true;
+                isFinishRound = true;
+                HandleRoundEnd(); // 라운드 종료 처리
+                return;
             }
         }
     }
 
+    // 라운드 종료
+    void HandleRoundEnd()
+    {
+        // 플레이어가 이긴 경우 체크
+        bool playerWon = (isImFirst && isFirstWin) || (!isImFirst && isSecondWin);
 
-    // 컴퓨터의 체크로직
+        if (playerWon)
+        {
+            Debug.Log($"라운드 {currentRound} 승리!");
+
+            // 8라운드 승리 시 WinScene으로 전환
+            // if (currentRound >= 8)
+            // {
+            //     Debug.Log("8라운드 승리! WinScene으로 이동합니다.");
+            //     ShowRoundEndDialogue(true, true); // 최종 승리 대사
+            //     StartCoroutine(LoadWinSceneWithDelay());
+            //     return;
+            // }
+
+            // 일반 라운드 승리 대사 표시 + 다음라운드 시작
+            ShowRoundEndDialogue(true, false);
+            currentRound++;
+            RoundText.text = currentRound.ToString();
+            Debug.Log($"다음 라운드: {currentRound}");
+            StartCoroutine(ResetBoardWithDelay());
+        }
+        else // 플레이어가 진 경우
+        {
+            Debug.Log("패배! 1라운드로 되돌아갑니다.");
+
+            // 패배 대사 표시
+            ShowRoundEndDialogue(false, false);
+
+            currentRound = 1;
+            RoundText.text = currentRound.ToString();
+
+            // 게임 초기화 후 1라운드로 돌아감
+            StartCoroutine(ResetBoardWithDelay());
+        }
+    }
+
+    // 게임 보드 초기화 함수
+    void ResetBoard()
+    {
+        // 게임 보드 초기화
+        for (int i = 0; i < gameBoard.Length; i++)
+        {
+            gameBoard[i] = 0;
+            ChangeButtonImage(i);
+        }
+
+        // 플래그 초기화
+        isFirstWin = false;
+        isSecondWin = false;
+        isFinishRound = false;
+
+        // 턴 랜덤 선택
+        int FirstTurn = Random.Range(1, 100);
+        SetFirstTurn(FirstTurn);
+
+        // 라운드 시작 대사 표시
+        ShowRoundStartDialogue();
+
+        // 컴퓨터가 선공이면 컴퓨터 턴 시작
+        if (!isImFirst)
+        {
+            ComputerTurn();
+        }
+
+        Debug.Log("게임 보드가 초기화되었습니다.");
+    }
+
+    // 딜레이 후 보드 초기화하는 코루틴
+    IEnumerator ResetBoardWithDelay()
+    {
+        yield return new WaitForSeconds(2.0f);
+        ResetBoard();
+    }
+
+    // IEnumerator LoadWinSceneWithDelay()
+    // {
+    //     // 2초 대기 (승리 메시지를 볼 시간)
+    //     yield return new WaitForSeconds(2.0f);
+    //     UnityEngine.SceneManagement.SceneManager.LoadScene("WinScene");
+    // }
+
+
+    // 컴퓨터 체크로직
     private bool IsWinningFor(int player)
     {
 
@@ -450,6 +669,11 @@ public class TicTacToeScript : MonoBehaviour
     // 틱택토를 1줄 미는 함수
     void pushLine(string direction, int idx)
     {
+        if (isFirstWin || isSecondWin)
+        {
+            Debug.Log("게임이 이미 종료되었습니다.");
+            return;
+        }
         if (direction == "up")
         {
             gameBoard[idx] = gameBoard[idx + 3];
@@ -483,16 +707,150 @@ public class TicTacToeScript : MonoBehaviour
             ChangeButtonImage(i);
         }
         CheckWhoWin(gameBoard);
-        changeTurn();
-        ComputerTurn();
+        if (!isFinishRound) // 라운드가 끝나지 않았을 때만 턴 변경
+        {
+            changeTurn();
+            ComputerTurn();
+        }
+    }
 
+    // ESC(일시정지) 관련 함수
+
+    // 일시정지 메뉴 띄우기
+    public void TogglePauseMenu()
+    {
+        if (isPaused)
+        {
+            ResumeGame();
+        }
+        else
+        {
+            PauseGame();
+        }
+    }
+
+    // 게임 일시정지
+    void PauseGame()
+    {
+        isPaused = true;
+        Time.timeScale = 0f;
+        PauseMenuPanel.SetActive(true);
+        Debug.Log("게임 일시정지");
+    }
+
+    // 게임 재개 (게임으로 돌아가기 버튼)
+    public void ResumeGame()
+    {
+        isPaused = false;
+        Time.timeScale = 1f;
+        PauseMenuPanel.SetActive(false);
+        ConfirmQuitPanel.SetActive(false);
+        Debug.Log("게임 재개");
+    }
+
+    // 종료 버튼 클릭 시 확인 메시지 표시
+    public void ShowQuitConfirmation()
+    {
+        PauseMenuPanel.SetActive(false); // 일시정지 메뉴 숨기기
+        ConfirmQuitPanel.SetActive(true); // 확인 메시지 표시
+        Debug.Log("종료 확인 메시지 표시");
+    }
+
+    // 확인 메시지에서 "예" 버튼 클릭 시 - IntroScene으로 이동
+    public void QuitToIntro()
+    {
+        Time.timeScale = 1f; // 게임 시간 복원 (Scene 전환 전에 필수)
+        Debug.Log("IntroScene으로 이동");
+        UnityEngine.SceneManagement.SceneManager.LoadScene("IntroScene");
+    }
+
+    // 확인 메시지에서 "아니오" 버튼 클릭 시 - 일시정지 메뉴로 복귀
+    public void CancelQuit()
+    {
+        ConfirmQuitPanel.SetActive(false); // 확인 메시지 숨기기
+        PauseMenuPanel.SetActive(true); // 일시정지 메뉴 다시 표시
+        Debug.Log("종료 취소");
     }
 
     void Start()
     {
         Application.targetFrameRate = 60;
         TurnText = GameObject.Find("TurnText");
+        RoundText = GameObject.Find("RoundText").GetComponent<TextMeshProUGUI>();
+        RobotText = GameObject.Find("RobotText").GetComponent<TextMeshProUGUI>(); // RobotText 찾기
 
+        // 일시정지 메뉴 UI 요소 찾기
+        PauseMenuPanel = GameObject.Find("PauseMenuPanel");
+        ConfirmQuitPanel = GameObject.Find("ConfirmQuitPanel");
+
+
+        Button resumeButton = null;
+        Button quitButton = null;
+        Button yesButton = null;
+        Button noButton = null;
+
+        if (PauseMenuPanel != null)
+        {
+
+            resumeButton = PauseMenuPanel.transform.Find("ResumeButton")?.GetComponent<Button>();
+            quitButton = PauseMenuPanel.transform.Find("QuitButton")?.GetComponent<Button>();
+        }
+
+        if (ConfirmQuitPanel != null)
+        {
+            yesButton = ConfirmQuitPanel.transform.Find("YesButton")?.GetComponent<Button>();
+            noButton = ConfirmQuitPanel.transform.Find("NoButton")?.GetComponent<Button>();
+        }
+
+        if (resumeButton != null)
+        {
+            resumeButton.onClick.AddListener(ResumeGame);
+            Debug.Log("ResumeButton 이벤트 연결 성공");
+        }
+        else
+        {
+            Debug.LogWarning("ResumeButton을 찾을 수 없습니다!");
+        }
+
+        if (quitButton != null)
+        {
+            quitButton.onClick.AddListener(ShowQuitConfirmation);
+            Debug.Log("QuitButton 이벤트 연결 성공");
+        }
+        else
+        {
+            Debug.LogWarning("QuitButton을 찾을 수 없습니다!");
+        }
+
+        if (yesButton != null)
+        {
+            yesButton.onClick.AddListener(QuitToIntro);
+            Debug.Log("YesButton 이벤트 연결 성공");
+        }
+        else
+        {
+            Debug.LogWarning("YesButton을 찾을 수 없습니다!");
+        }
+
+        if (noButton != null)
+        {
+            noButton.onClick.AddListener(CancelQuit);
+            Debug.Log("NoButton 이벤트 연결 성공");
+        }
+        else
+        {
+            Debug.LogWarning("NoButton을 찾을 수 없습니다!");
+        }
+
+        // 이제 패널들을 비활성화
+        if (PauseMenuPanel != null) PauseMenuPanel.SetActive(false);
+        if (ConfirmQuitPanel != null) ConfirmQuitPanel.SetActive(false);
+
+        // 초기 라운드 표시
+        RoundText.text = currentRound.ToString();
+
+        // 라운드 시작 대사 표시
+        ShowRoundStartDialogue();
 
         for (int i = 0; i < buttonName.Length; i++)
         {
@@ -538,8 +896,6 @@ public class TicTacToeScript : MonoBehaviour
             ComputerTurn();
         }
         Debug.Log($"내턴: {isImFirst}"); // isImFirst 값 출력
-
-        RoundText = GameObject.Find("RoundText").GetComponent<TextMeshProUGUI>();
     }
 
 
@@ -547,5 +903,10 @@ public class TicTacToeScript : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        // ESC 키 입력 감지
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            TogglePauseMenu();
+        }
     }
 }
