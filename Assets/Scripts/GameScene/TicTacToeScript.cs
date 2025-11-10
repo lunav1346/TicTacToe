@@ -153,7 +153,7 @@ public class TicTacToeScript : MonoBehaviour
     }
 
     // 틱택토시 버튼 클릭
-    public void OnButtonClick(int buttonIndex)
+    public void OnButtonClick(int buttonIndex, bool isComputerMove = false)
     {
         if (isFirstWin || isSecondWin)
         {
@@ -161,8 +161,8 @@ public class TicTacToeScript : MonoBehaviour
             return;
         }
 
-        // 컴퓨터 턴이면 플레이어 입력 무시
-        if (!isMyTurn)
+        // 컴퓨터 턴이면 플레이어 입력 무시 (단, 컴퓨터가 직접 호출한 경우는 허용)
+        if (!isMyTurn && !isComputerMove)
         {
             Debug.Log("컴퓨터 턴입니다. 기다려주세요.");
             return;
@@ -316,7 +316,7 @@ public class TicTacToeScript : MonoBehaviour
             // 밀기를 하지 않거나 유리한 밀기가 없으면 일반 수 두기
             int[] BlankSlot = GetEmptySlots();
             int selectedIndex = HybridMarking(BlankSlot);
-            OnButtonClick(selectedIndex);
+            OnButtonClick(selectedIndex, true);
         }
         else // Random, Offensive, Defensive
         {
@@ -336,7 +336,7 @@ public class TicTacToeScript : MonoBehaviour
                 selectedIndex = DefensiveMarking(BlankSlot);
             }
 
-            OnButtonClick(selectedIndex);
+            OnButtonClick(selectedIndex, true);
         }
     }
 
