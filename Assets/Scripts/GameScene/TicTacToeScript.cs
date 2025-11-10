@@ -153,13 +153,23 @@ public class TicTacToeScript : MonoBehaviour
     }
 
     // 틱택토시 버튼 클릭
-    public void OnButtonClick(int buttonIndex)
+    public void OnButtonClick(int buttonIndex, bool isComputerMove = false)
     {
+        Debug.Log($"OnButtonClick 호출 - buttonIndex: {buttonIndex}, isComputerMove: {isComputerMove}, isMyTurn: {isMyTurn}, isImFirst: {isImFirst}, gameBoard[{buttonIndex}]: {gameBoard[buttonIndex]}");
+
         if (isFirstWin || isSecondWin)
         {
             Debug.Log("게임이 이미 종료되었습니다.");
             return;
         }
+
+        // 컴퓨터 턴이면 플레이어 입력 무시 (단, 컴퓨터가 직접 호출한 경우는 허용)
+        if (!isMyTurn && !isComputerMove)
+        {
+            Debug.Log("컴퓨터 턴입니다. 기다려주세요.");
+            return;
+        }
+
         // Debug.Log($"{buttonIndex} is clicked");
         if (isImFirst && isMyTurn && gameBoard[buttonIndex] == 0) // 내가 O & 내턴 & 비어있는 칸
         {
@@ -183,19 +193,17 @@ public class TicTacToeScript : MonoBehaviour
                 ComputerTurn();
             }
         }
-        else if (isImFirst && !isMyTurn && gameBoard[buttonIndex] == 0) // 내가 O & 컴퓨터턴 & 비어있는 칸
+        else if (isComputerMove && gameBoard[buttonIndex] == 0) // 컴퓨터가 수를 둠
         {
-            gameBoard[buttonIndex] = 2;
-            ChangeButtonImage(buttonIndex);
-            CheckWhoWin(gameBoard);
-            if (!isFinishRound) // Round가 끝나지 않았다면 계속하기.
+            // isImFirst가 true면 컴퓨터는 2 (X), false면 컴퓨터는 1 (O)
+            if (isImFirst)
             {
-                changeTurn();
+                gameBoard[buttonIndex] = 2;
             }
-        }
-        else if (!isImFirst && !isMyTurn && gameBoard[buttonIndex] == 0) // 내가 X & 컴퓨터턴 & 비어있는 칸
-        {
-            gameBoard[buttonIndex] = 1;
+            else
+            {
+                gameBoard[buttonIndex] = 1;
+            }
             ChangeButtonImage(buttonIndex);
             CheckWhoWin(gameBoard);
             if (!isFinishRound) // Round가 끝나지 않았다면 계속하기.
@@ -205,7 +213,10 @@ public class TicTacToeScript : MonoBehaviour
         }
         else
         {
-            Debug.Log("이미 눌린 버튼입니다!!!!!!");
+            if (!isComputerMove)
+            {
+                Debug.Log("이미 눌린 버튼입니다!!!!!!");
+            }
         }
     }
 
@@ -328,7 +339,7 @@ public class TicTacToeScript : MonoBehaviour
             // 밀기를 하지 않거나 유리한 밀기가 없으면 일반 수 두기
             int[] BlankSlot = GetEmptySlots();
             int selectedIndex = HybridMarking(BlankSlot);
-            OnButtonClick(selectedIndex);
+            OnButtonClick(selectedIndex, true);
         }
         else // Random, Offensive, Defensive
         {
@@ -348,7 +359,7 @@ public class TicTacToeScript : MonoBehaviour
                 selectedIndex = DefensiveMarking(BlankSlot);
             }
 
-            OnButtonClick(selectedIndex);
+            OnButtonClick(selectedIndex, true);
         }
     }
 
@@ -1106,6 +1117,14 @@ public class TicTacToeScript : MonoBehaviour
             Debug.Log("게임이 이미 종료되었습니다.");
             return;
         }
+
+        // 컴퓨터 턴이면 플레이어 입력 무시
+        if (!isMyTurn)
+        {
+            Debug.Log("컴퓨터 턴입니다. 기다려주세요.");
+            return;
+        }
+
         if (direction == "up")
         {
             gameBoard[idx] = gameBoard[idx + 3];
@@ -1207,6 +1226,13 @@ public class TicTacToeScript : MonoBehaviour
     void Start()
     {
         Application.targetFrameRate = 60;
+
+        // 게임보드 초기화
+        for (int i = 0; i < gameBoard.Length; i++)
+        {
+            gameBoard[i] = 0;
+        }
+
         TurnText = GameObject.Find("TurnText");
         RoundText = GameObject.Find("RoundText").GetComponent<TextMeshProUGUI>();
         RobotText = GameObject.Find("RobotText").GetComponent<TextMeshProUGUI>(); // RobotText 찾기
