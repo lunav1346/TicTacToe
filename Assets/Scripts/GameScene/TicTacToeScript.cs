@@ -160,6 +160,14 @@ public class TicTacToeScript : MonoBehaviour
             Debug.Log("게임이 이미 종료되었습니다.");
             return;
         }
+
+        // 컴퓨터 턴이면 플레이어 입력 무시
+        if (!isMyTurn)
+        {
+            Debug.Log("컴퓨터 턴입니다. 기다려주세요.");
+            return;
+        }
+
         // Debug.Log($"{buttonIndex} is clicked");
         if (isImFirst && isMyTurn && gameBoard[buttonIndex] == 0) // 내가 O & 내턴 & 비어있는 칸
         {
@@ -181,26 +189,6 @@ public class TicTacToeScript : MonoBehaviour
             {
                 changeTurn();
                 ComputerTurn();
-            }
-        }
-        else if (isImFirst && !isMyTurn && gameBoard[buttonIndex] == 0) // 내가 O & 컴퓨터턴 & 비어있는 칸
-        {
-            gameBoard[buttonIndex] = 2;
-            ChangeButtonImage(buttonIndex);
-            CheckWhoWin(gameBoard);
-            if (!isFinishRound) // Round가 끝나지 않았다면 계속하기.
-            {
-                changeTurn();
-            }
-        }
-        else if (!isImFirst && !isMyTurn && gameBoard[buttonIndex] == 0) // 내가 X & 컴퓨터턴 & 비어있는 칸
-        {
-            gameBoard[buttonIndex] = 1;
-            ChangeButtonImage(buttonIndex);
-            CheckWhoWin(gameBoard);
-            if (!isFinishRound) // Round가 끝나지 않았다면 계속하기.
-            {
-                changeTurn();
             }
         }
         else
@@ -1106,6 +1094,14 @@ public class TicTacToeScript : MonoBehaviour
             Debug.Log("게임이 이미 종료되었습니다.");
             return;
         }
+
+        // 컴퓨터 턴이면 플레이어 입력 무시
+        if (!isMyTurn)
+        {
+            Debug.Log("컴퓨터 턴입니다. 기다려주세요.");
+            return;
+        }
+
         if (direction == "up")
         {
             gameBoard[idx] = gameBoard[idx + 3];
