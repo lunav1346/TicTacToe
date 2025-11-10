@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 public class TicTacToeScript : MonoBehaviour
 {
@@ -40,39 +41,37 @@ public class TicTacToeScript : MonoBehaviour
     bool isSecondWin = false;
     bool isFinishRound = false;
     int[] gameBoard = new int[9];
-    int currentRound = 1;
+    int currentRound = 8;
 
     // 로봇 대사 배열들
     string[] roundStartDialogues = {
-        "시스템 가동. 라운드를 시작하겠습니다.",
+        "트루두스 가동. 라운드를 시작하겠습니다.",
         "전략 분석 중... 준비되셨습니까?",
-        "연산 시작. 최선을 다하시길 바랍니다.",
-        "초기화 완료. 게임을 시작합니다.",
-        "준비 완료. 대결을 시작하죠."
+        "유흥모드 시작. 최선을 다하시길 바랍니다.",
+        "관전 로봇들이 대기중입니다. 게임을 시작하죠.",
+        "패배한 종족의 몸부림... 대결을 시작하죠."
     };
 
     string[] playerWinDialogues = {
-        "분석 결과... 당신의 승리입니다.",
+        "인간 주제에 제법이군요.",
         "흥미롭군요. 당신이 이겼습니다.",
         "시스템 오류... 아니, 당신의 실력이군요.",
-        "예상 밖의 결과입니다. 승리를 축하합니다.",
-        "계산 완료. 당신의 승리를 인정합니다."
+        "관전로봇이 재미있어하는군요. 승리입니다.",
     };
 
     string[] playerLoseDialogues = {
-        "안타깝습니다. 처음부터 다시 시작하죠.",
-        "오류 감지. 라운드 1로 돌아갑니다.",
-        "재부팅이 필요합니다. 초기화합니다.",
-        "실패를 분석 중... 다시 시작하겠습니다.",
-        "시스템 복구 중. 처음부터 다시입니다."
+        "예상된 결과입니다. 처음으로 돌아가십시오.",
+        "역시 인간의 한계는 명확하군요.",
+        "재미없습니다. 돌아가시죠.",
+        "트루두스의 법칙입니다. 재시작하겠습니다",
     };
 
     string[] finalWinDialogues = {
-        "모든 연산 종료. 당신의 완전한 승리입니다.",
-        "시스템 종료... 당신은 진정한 승자입니다.",
-        "분석 불가... 놀라운 실력입니다. 축하합니다!",
-        "최종 결과 확정. 당신의 승리를 기록합니다.",
-        "프로그램 종료. 경의를 표합니다."
+        "이것이 인간의 가능성...",
+        "인정하기 싫습니다만, 당신은 특별합니다.",
+        "인간이 이긴게 아니라, 당신이 이긴겁니다.",
+        "8라운드까지.. 우리는 틀리지 않았을텐데..",
+        "인간이지만, 경의를 표하지요. 영광이였습니다."
     };
 
 
@@ -235,19 +234,147 @@ public class TicTacToeScript : MonoBehaviour
     {
         if (isMyTurn) yield break; // 사용자 턴이면 코루틴 종료
 
-        // 컴퓨터 로직 실행
-        int[] BlankSlot = GetEmptySlots();
-
-        // int selectedIndex = RandomMarking(BlankSlot);
-        // int selectedIndex = OffensiveMarking(BlankSlot);
-
-        int selectedIndex = DefensiveMarking(BlankSlot);
+        // 라운드에 따른 AI 난이도 결정
+        string aiType = GetAIDecisionByRound();
+        Debug.Log($"현재 라운드: {currentRound}, AI 타입: {aiType}");
 
         // 생각하는 척 하며 1.5초 기다리기
         yield return new WaitForSeconds(1.5f);
 
-        // 실제로 수 두기
-        OnButtonClick(selectedIndex);
+        // AI 타입에 따라 다른 전략 사용
+        if (aiType == "Hybrid") // 통합적 의사결정 (8라운드)
+        {
+            // 보드에 충분한 타일이 있는지 확인 (최소 4개)
+            int filledTiles = CountFilledTiles();
+
+            // 개선 방안 2: 밀기 확률을 게임 진행도에 따라 조절
+            // 4~5개: 10%, 6~7개: 25%, 8~9개: 50% (기존 40%에서 상향)
+            float pushChance = 0f;
+            if (filledTiles >= 8)
+            {
+                pushChance = 0.50f; // 후반(8~9개)에는 높은 확률 - 기존 40%에서 상향
+            }
+            else if (filledTiles >= 6)
+            {
+                pushChance = 0.25f; // 중반(6~7개)에는 중간 확률
+            }
+            else if (filledTiles >= 4)
+            {
+                pushChance = 0.10f; // 초반(4~5개)에는 낮은 확률
+            }
+
+            // 밀기를 시도할지 결정
+            float randomValue = Random.Range(0f, 1f);
+
+            if (filledTiles >= 4 && randomValue < pushChance)
+            {
+                Debug.Log($"밀기 시도 (타일 수: {filledTiles}, 확률: {pushChance * 100}%)");
+
+                // 가능한 밀기 동작들을 평가
+                var pushMoves = FindBestPushMoves();
+
+                // 점수가 높은 밀기 동작만 필터링 (점수 > 0)
+                var goodMoves = new System.Collections.Generic.List<(string, int, int)>();
+                int maxScore = int.MinValue;
+
+                foreach (var move in pushMoves)
+                {
+                    if (move.Item3 > 0) // 점수가 양수인 것만
+                    {
+                        goodMoves.Add(move);
+                        if (move.Item3 > maxScore)
+                        {
+                            maxScore = move.Item3;
+                        }
+                    }
+                }
+
+                // 점수가 가장 높은 밀기들 중에서 선택
+                if (goodMoves.Count > 0)
+                {
+                    // 최고 점수의 80% 이상인 밀기들만 선택
+                    int threshold = (int)(maxScore * 0.8f);
+                    var bestMoves = new System.Collections.Generic.List<(string, int, int)>();
+
+                    foreach (var move in goodMoves)
+                    {
+                        if (move.Item3 >= threshold)
+                        {
+                            bestMoves.Add(move);
+                        }
+                    }
+
+                    // 최선의 밀기들 중 하나를 랜덤으로 선택
+                    if (bestMoves.Count > 0)
+                    {
+                        int randomIndex = Random.Range(0, bestMoves.Count);
+                        var selectedMove = bestMoves[randomIndex];
+
+                        Debug.Log($"컴퓨터가 전략적 밀기 선택: {selectedMove.Item1}, 인덱스 {selectedMove.Item2}, 점수 {selectedMove.Item3}");
+                        ComputerExecutePushLine(selectedMove.Item1, selectedMove.Item2);
+
+                        // 밀기 후 라운드가 끝나지 않았으면 턴 변경
+                        if (!isFinishRound)
+                        {
+                            changeTurn();
+                        }
+                        yield break;
+                    }
+                }
+
+                Debug.Log("유리한 밀기를 찾지 못함 - 일반 수를 둡니다");
+            }
+
+            // 밀기를 하지 않거나 유리한 밀기가 없으면 일반 수 두기
+            int[] BlankSlot = GetEmptySlots();
+            int selectedIndex = HybridMarking(BlankSlot);
+            OnButtonClick(selectedIndex);
+        }
+        else // Random, Offensive, Defensive
+        {
+            int[] BlankSlot = GetEmptySlots();
+            int selectedIndex;
+
+            if (aiType == "Random")
+            {
+                selectedIndex = RandomMarking(BlankSlot);
+            }
+            else if (aiType == "Offensive")
+            {
+                selectedIndex = OffensiveMarking(BlankSlot);
+            }
+            else // Defensive
+            {
+                selectedIndex = DefensiveMarking(BlankSlot);
+            }
+
+            OnButtonClick(selectedIndex);
+        }
+    }
+
+    // 라운드별 AI 난이도 결정 함수
+    // 1라운드: 랜덤
+    // 2, 3, 4라운드: 공격적
+    // 5, 6, 7라운드: 방어적
+    // 8라운드: 통합적 (행/열 밀기 포함)
+    string GetAIDecisionByRound()
+    {
+        if (currentRound == 1)
+        {
+            return "Random";
+        }
+        else if (currentRound >= 2 && currentRound <= 4)
+        {
+            return "Offensive";
+        }
+        else if (currentRound >= 5 && currentRound <= 7)
+        {
+            return "Defensive";
+        }
+        else // currentRound == 8
+        {
+            return "Hybrid";
+        }
     }
 
     // 컴퓨터 로직 - 메인
@@ -351,258 +478,563 @@ public class TicTacToeScript : MonoBehaviour
         return RandomMarking(EmptySlots);
     }
 
-    // 승패 여부 체크
-    void CheckWhoWin(int[] gameBoard)
+    // 개선 방안 1: 전략적 위치 선택을 위한 위치 점수 계산 함수
+    // 중앙(인덱스 4): 4점 - 가로/세로/대각선 4개의 승리 라인에 속함
+    // 코너(인덱스 0,2,6,8): 3점 - 가로/세로/대각선 하나씩 총 3개의 승리 라인에 속함
+    // 변의 중앙(인덱스 1,3,5,7): 2점 - 가로/세로 2개의 승리 라인에 속함
+    int GetPositionScore(int position)
     {
-        // 가로줄 확인
-        if (GetGameBoardValue(0, 0) == GetGameBoardValue(0, 1) && GetGameBoardValue(0, 1) == GetGameBoardValue(0, 2) && GetGameBoardValue(0, 0) != 0)
+        // 중앙 위치
+        if (position == 4)
         {
-            if (GetGameBoardValue(0, 0) == 1)
-            {
-                Debug.Log("First Win!");
-                isFirstWin = true;
-                isFinishRound = true;
-                HandleRoundEnd(); // 라운드 종료 처리
-                return;
-            }
-            else
-            {
-                Debug.Log("Second Win!");
-                isSecondWin = true;
-                isFinishRound = true;
-                HandleRoundEnd(); // 라운드 종료 처리
-                return;
-            }
+            return 4;
         }
-        if (GetGameBoardValue(1, 0) == GetGameBoardValue(1, 1) && GetGameBoardValue(1, 1) == GetGameBoardValue(1, 2) && GetGameBoardValue(1, 0) != 0)
+        // 코너 위치
+        else if (position == 0 || position == 2 || position == 6 || position == 8)
         {
-            if (GetGameBoardValue(1, 0) == 1)
-            {
-                Debug.Log("First Win!");
-                isFirstWin = true;
-                isFinishRound = true;
-                HandleRoundEnd(); // 라운드 종료 처리
-                return;
-            }
-            else
-            {
-                Debug.Log("Second Win!");
-                isSecondWin = true;
-                isFinishRound = true;
-                HandleRoundEnd(); // 라운드 종료 처리
-                return;
-            }
+            return 3;
         }
-        if (GetGameBoardValue(2, 0) == GetGameBoardValue(2, 1) && GetGameBoardValue(2, 1) == GetGameBoardValue(2, 2) && GetGameBoardValue(2, 0) != 0)
+        // 변의 중앙 위치
+        else // position == 1 || position == 3 || position == 5 || position == 7
         {
-            if (GetGameBoardValue(2, 0) == 1)
-            {
-                Debug.Log("First Win!");
-                isFirstWin = true;
-                isFinishRound = true;
-                HandleRoundEnd(); // 라운드 종료 처리
-                return;
-            }
-            else
-            {
-                Debug.Log("Second Win!");
-                isSecondWin = true;
-                isFinishRound = true;
-                HandleRoundEnd(); // 라운드 종료 처리
-                return;
-            }
-        }
-        // 세로줄 확인
-        if (GetGameBoardValue(0, 0) == GetGameBoardValue(1, 0) && GetGameBoardValue(1, 0) == GetGameBoardValue(2, 0) && GetGameBoardValue(0, 0) != 0)
-        {
-            if (GetGameBoardValue(0, 0) == 1)
-            {
-                Debug.Log("First Win!");
-                isFirstWin = true;
-                isFinishRound = true;
-                HandleRoundEnd(); // 라운드 종료 처리
-                return;
-            }
-            else
-            {
-                Debug.Log("Second Win!");
-                isSecondWin = true;
-                isFinishRound = true;
-                HandleRoundEnd(); // 라운드 종료 처리
-                return;
-            }
-        }
-        if (GetGameBoardValue(0, 1) == GetGameBoardValue(1, 1) && GetGameBoardValue(1, 1) == GetGameBoardValue(2, 1) && GetGameBoardValue(0, 1) != 0)
-        {
-            if (GetGameBoardValue(0, 1) == 1)
-            {
-                Debug.Log("First Win!");
-                isFirstWin = true;
-                isFinishRound = true;
-                HandleRoundEnd(); // 라운드 종료 처리
-                return;
-            }
-            else
-            {
-                Debug.Log("Second Win!");
-                isSecondWin = true;
-                isFinishRound = true;
-                HandleRoundEnd(); // 라운드 종료 처리
-                return;
-            }
-        }
-        if (GetGameBoardValue(0, 2) == GetGameBoardValue(1, 2) && GetGameBoardValue(1, 2) == GetGameBoardValue(2, 2) && GetGameBoardValue(0, 2) != 0)
-        {
-            if (GetGameBoardValue(0, 2) == 1)
-            {
-                Debug.Log("First Win!");
-                isFirstWin = true;
-                isFinishRound = true;
-                HandleRoundEnd(); // 라운드 종료 처리
-                return;
-            }
-            else
-            {
-                Debug.Log("Second Win!");
-                isSecondWin = true;
-                isFinishRound = true;
-                HandleRoundEnd(); // 라운드 종료 처리
-                return;
-            }
-        }
-        // 대각선 체크
-        if (GetGameBoardValue(0, 0) == GetGameBoardValue(1, 1) && GetGameBoardValue(1, 1) == GetGameBoardValue(2, 2) && GetGameBoardValue(0, 0) != 0)
-        {
-            if (GetGameBoardValue(0, 0) == 1)
-            {
-                Debug.Log("First Win!");
-                isFirstWin = true;
-                isFinishRound = true;
-                HandleRoundEnd(); // 라운드 종료 처리
-                return;
-            }
-            else
-            {
-                Debug.Log("Second Win!");
-                isSecondWin = true;
-                isFinishRound = true;
-                HandleRoundEnd(); // 라운드 종료 처리
-                return;
-            }
-        }
-        if (GetGameBoardValue(0, 2) == GetGameBoardValue(1, 1) && GetGameBoardValue(1, 1) == GetGameBoardValue(2, 0) && GetGameBoardValue(0, 2) != 0)
-        {
-            if (GetGameBoardValue(0, 2) == 1)
-            {
-                Debug.Log("First Win!");
-                isFirstWin = true;
-                isFinishRound = true;
-                HandleRoundEnd(); // 라운드 종료 처리
-                return;
-            }
-            else
-            {
-                Debug.Log("Second Win!");
-                isSecondWin = true;
-                isFinishRound = true;
-                HandleRoundEnd(); // 라운드 종료 처리
-                return;
-            }
+            return 2;
         }
     }
 
-    // 라운드 종료
-    void HandleRoundEnd()
+    // 개선 방안 1: 컴퓨터 로직 - 통합적 의사결정 (공격 + 방어 + 전략적 위치)
+    // 1순위: 플레이어가 이길 수 있는 수 막기 (방어)
+    // 2순위: 컴퓨터가 이길 수 있는 수 두기 (공격)
+    // 3순위: 전략적 위치 선택 (위치 점수가 높은 칸 선택)
+    public int HybridMarking(int[] EmptySlots)
     {
-        // 플레이어가 이긴 경우 체크
-        bool playerWon = (isImFirst && isFirstWin) || (!isImFirst && isSecondWin);
-
-        if (playerWon)
+        // 먼저 플레이어가 이길 수 있는지 체크 (방어 우선)
+        int PlayerPlayer;
+        int computerPlayer;
+        if (isImFirst)
         {
-            Debug.Log($"라운드 {currentRound} 승리!");
-
-            // 8라운드 승리 시 WinScene으로 전환
-            // if (currentRound >= 8)
-            // {
-            //     Debug.Log("8라운드 승리! WinScene으로 이동합니다.");
-            //     ShowRoundEndDialogue(true, true); // 최종 승리 대사
-            //     StartCoroutine(LoadWinSceneWithDelay());
-            //     return;
-            // }
-
-            // 일반 라운드 승리 대사 표시 + 다음라운드 시작
-            ShowRoundEndDialogue(true, false);
-            currentRound++;
-            RoundText.text = currentRound.ToString();
-            Debug.Log($"다음 라운드: {currentRound}");
-            StartCoroutine(ResetBoardWithDelay());
+            PlayerPlayer = 1;
+            computerPlayer = 2;
         }
-        else // 플레이어가 진 경우
+        else
         {
-            Debug.Log("패배! 1라운드로 되돌아갑니다.");
-
-            // 패배 대사 표시
-            ShowRoundEndDialogue(false, false);
-
-            currentRound = 1;
-            RoundText.text = currentRound.ToString();
-
-            // 게임 초기화 후 1라운드로 돌아감
-            StartCoroutine(ResetBoardWithDelay());
+            PlayerPlayer = 2;
+            computerPlayer = 1;
         }
+
+        // 방어 체크: 플레이어가 다음 턴에 이길 수 있는 칸이 있는지 확인
+        for (int i = 0; i < EmptySlots.Length; i++)
+        {
+            int slotIndex = EmptySlots[i];
+            gameBoard[slotIndex] = PlayerPlayer;
+            if (IsWinningFor(PlayerPlayer))
+            {
+                gameBoard[slotIndex] = 0;
+                Debug.Log($"통합 AI - 방어적 수: {slotIndex}");
+                return slotIndex; // 플레이어의 승리를 막을 수 있는 칸 발견
+            }
+            gameBoard[slotIndex] = 0;
+        }
+
+        // 공격 체크: 컴퓨터가 이길 수 있는 칸이 있는지 확인
+        for (int i = 0; i < EmptySlots.Length; i++)
+        {
+            int slotIndex = EmptySlots[i];
+            gameBoard[slotIndex] = computerPlayer;
+            if (IsWinningFor(computerPlayer))
+            {
+                gameBoard[slotIndex] = 0;
+                Debug.Log($"통합 AI - 공격적 수: {slotIndex}");
+                return slotIndex; // 컴퓨터가 승리할 수 있는 칸 발견
+            }
+            gameBoard[slotIndex] = 0;
+        }
+
+        // 개선 방안 1 적용: 방어도 공격도 필요없으면 전략적 위치 선택
+        // 위치 점수가 가장 높은 빈 칸을 선택
+        int bestSlot = EmptySlots[0];
+        int bestScore = GetPositionScore(EmptySlots[0]);
+
+        for (int i = 1; i < EmptySlots.Length; i++)
+        {
+            int currentSlot = EmptySlots[i];
+            int currentScore = GetPositionScore(currentSlot);
+
+            if (currentScore > bestScore)
+            {
+                bestScore = currentScore;
+                bestSlot = currentSlot;
+            }
+        }
+
+        Debug.Log($"통합 AI - 전략적 위치 선택: 인덱스 {bestSlot}, 점수 {bestScore}");
+        return bestSlot;
     }
 
-    // 게임 보드 초기화 함수
-    void ResetBoard()
+    // 개선 방안 2: 컴퓨터 로직 - 행/열 밀기 평가 (점수 기반)
+    // 밀기의 가치를 점수로 평가하여 반환
+    // 양수: 유리함, 0: 중립, 음수: 불리함
+    // 공격 점수를 40점에서 70점으로 상향
+    int EvaluatePushLineScore(string direction, int idx)
     {
-        // 게임 보드 초기화
+        // 원래 보드 상태 백업
+        int[] originalBoard = new int[9];
+        System.Array.Copy(gameBoard, originalBoard, 9);
+
+        // 임시로 밀기 실행
+        if (direction == "up")
+        {
+            gameBoard[idx] = gameBoard[idx + 3];
+            gameBoard[idx + 3] = gameBoard[idx + 6];
+            gameBoard[idx + 6] = 0;
+        }
+        else if (direction == "down")
+        {
+            gameBoard[idx + 6] = gameBoard[idx + 3];
+            gameBoard[idx + 3] = gameBoard[idx];
+            gameBoard[idx] = 0;
+        }
+        else if (direction == "right")
+        {
+            gameBoard[idx + 2] = gameBoard[idx + 1];
+            gameBoard[idx + 1] = gameBoard[idx];
+            gameBoard[idx] = 0;
+        }
+        else if (direction == "left")
+        {
+            gameBoard[idx] = gameBoard[idx + 1];
+            gameBoard[idx + 1] = gameBoard[idx + 2];
+            gameBoard[idx + 2] = 0;
+        }
+
+        int computerPlayer = isImFirst ? 2 : 1;
+        int playerPlayer = isImFirst ? 1 : 2;
+
+        int score = 0;
+
+        // 최고 우선순위: 밀고 난 후 컴퓨터가 즉시 이길 수 있으면 매우 높은 점수
+        if (IsWinningFor(computerPlayer))
+        {
+            score += 1000;
+        }
+
+        // 두 번째 우선순위: 밀고 난 후 플레이어가 즉시 이길 수 있게 되면 큰 감점
+        if (IsWinningFor(playerPlayer))
+        {
+            score -= 1000;
+        }
+
+        // 세 번째: 밀기 전후의 위험도 비교
+        // 원래 보드로 복원해서 밀기 전 상태 체크
+        System.Array.Copy(originalBoard, gameBoard, 9);
+
+        int playerThreatsBeforePush = CountTwoInARow(playerPlayer);
+        int computerOpportunitiesBeforePush = CountTwoInARow(computerPlayer);
+
+        // 다시 밀기 실행
+        if (direction == "up")
+        {
+            gameBoard[idx] = gameBoard[idx + 3];
+            gameBoard[idx + 3] = gameBoard[idx + 6];
+            gameBoard[idx + 6] = 0;
+        }
+        else if (direction == "down")
+        {
+            gameBoard[idx + 6] = gameBoard[idx + 3];
+            gameBoard[idx + 3] = gameBoard[idx];
+            gameBoard[idx] = 0;
+        }
+        else if (direction == "right")
+        {
+            gameBoard[idx + 2] = gameBoard[idx + 1];
+            gameBoard[idx + 1] = gameBoard[idx];
+            gameBoard[idx] = 0;
+        }
+        else if (direction == "left")
+        {
+            gameBoard[idx] = gameBoard[idx + 1];
+            gameBoard[idx + 1] = gameBoard[idx + 2];
+            gameBoard[idx + 2] = 0;
+        }
+
+        int playerThreatsAfterPush = CountTwoInARow(playerPlayer);
+        int computerOpportunitiesAfterPush = CountTwoInARow(computerPlayer);
+
+        // 플레이어의 위협을 줄이면 점수 증가
+        score += (playerThreatsBeforePush - playerThreatsAfterPush) * 50;
+
+        // 개선 방안 2 적용: 컴퓨터의 기회를 늘리면 점수 증가 (40점 -> 70점으로 상향)
+        score += (computerOpportunitiesAfterPush - computerOpportunitiesBeforePush) * 70;
+
+        // 보드 복원
+        System.Array.Copy(originalBoard, gameBoard, 9);
+
+        return score;
+    }
+
+    // 특정 플레이어가 2개 연속으로 놓은 줄의 개수를 카운트
+    // 이것은 승리에 가까운 정도를 나타냄
+    int CountTwoInARow(int player)
+    {
+        int count = 0;
+
+        // 가로줄 체크 (각 행에서 2개가 같고 1개가 비어있는 경우)
+        for (int row = 0; row < 3; row++)
+        {
+            int playerCount = 0;
+            int emptyCount = 0;
+            for (int col = 0; col < 3; col++)
+            {
+                int value = GetGameBoardValue(row, col);
+                if (value == player) playerCount++;
+                else if (value == 0) emptyCount++;
+            }
+            if (playerCount == 2 && emptyCount == 1) count++;
+        }
+
+        // 세로줄 체크
+        for (int col = 0; col < 3; col++)
+        {
+            int playerCount = 0;
+            int emptyCount = 0;
+            for (int row = 0; row < 3; row++)
+            {
+                int value = GetGameBoardValue(row, col);
+                if (value == player) playerCount++;
+                else if (value == 0) emptyCount++;
+            }
+            if (playerCount == 2 && emptyCount == 1) count++;
+        }
+
+        // 대각선 체크 (왼쪽 위 -> 오른쪽 아래)
+        int playerCountDiag1 = 0;
+        int emptyCountDiag1 = 0;
+        for (int i = 0; i < 3; i++)
+        {
+            int value = GetGameBoardValue(i, i);
+            if (value == player) playerCountDiag1++;
+            else if (value == 0) emptyCountDiag1++;
+        }
+        if (playerCountDiag1 == 2 && emptyCountDiag1 == 1) count++;
+
+        // 대각선 체크 (오른쪽 위 -> 왼쪽 아래)
+        int playerCountDiag2 = 0;
+        int emptyCountDiag2 = 0;
+        for (int i = 0; i < 3; i++)
+        {
+            int value = GetGameBoardValue(i, 2 - i);
+            if (value == player) playerCountDiag2++;
+            else if (value == 0) emptyCountDiag2++;
+        }
+        if (playerCountDiag2 == 2 && emptyCountDiag2 == 1) count++;
+
+        return count;
+    }
+
+    // 컴퓨터 로직 - 최선의 행/열 밀기 찾기
+    // 모든 가능한 밀기 동작을 평가하고 점수가 높은 것을 반환
+    System.Collections.Generic.List<(string direction, int idx, int score)> FindBestPushMoves()
+    {
+        var pushMoves = new System.Collections.Generic.List<(string, int, int)>();
+
+        // 모든 가능한 up 동작 평가 (열 0, 1, 2)
+        for (int i = 0; i < 3; i++)
+        {
+            int score = EvaluatePushLineScore("up", i);
+            pushMoves.Add(("up", i, score));
+        }
+
+        // 모든 가능한 down 동작 평가 (열 0, 1, 2)
+        for (int i = 0; i < 3; i++)
+        {
+            int score = EvaluatePushLineScore("down", i);
+            pushMoves.Add(("down", i, score));
+        }
+
+        // 모든 가능한 left 동작 평가 (행 0, 3, 6)
+        for (int i = 0; i < 3; i++)
+        {
+            int idx = i * 3;
+            int score = EvaluatePushLineScore("left", idx);
+            pushMoves.Add(("left", idx, score));
+        }
+
+        // 모든 가능한 right 동작 평가 (행 0, 3, 6)
+        for (int i = 0; i < 3; i++)
+        {
+            int idx = i * 3;
+            int score = EvaluatePushLineScore("right", idx);
+            pushMoves.Add(("right", idx, score));
+        }
+
+        return pushMoves;
+    }
+
+    // 보드에 놓인 타일 개수를 세는 함수
+    int CountFilledTiles()
+    {
+        int count = 0;
+        for (int i = 0; i < 9; i++)
+        {
+            if (gameBoard[i] != 0) count++;
+        }
+        return count;
+    }
+
+    // 컴퓨터 로직 - 실제로 행/열 밀기 실행 (컴퓨터용)
+    void ComputerExecutePushLine(string direction, int idx)
+    {
+        Debug.Log($"컴퓨터가 행/열 밀기 실행: {direction}, 인덱스 {idx}");
+
+        if (direction == "up")
+        {
+            gameBoard[idx] = gameBoard[idx + 3];
+            gameBoard[idx + 3] = gameBoard[idx + 6];
+            gameBoard[idx + 6] = 0;
+        }
+        else if (direction == "down")
+        {
+            gameBoard[idx + 6] = gameBoard[idx + 3];
+            gameBoard[idx + 3] = gameBoard[idx];
+            gameBoard[idx] = 0;
+        }
+        else if (direction == "right")
+        {
+            gameBoard[idx + 2] = gameBoard[idx + 1];
+            gameBoard[idx + 1] = gameBoard[idx];
+            gameBoard[idx] = 0;
+        }
+        else if (direction == "left")
+        {
+            gameBoard[idx] = gameBoard[idx + 1];
+            gameBoard[idx + 1] = gameBoard[idx + 2];
+            gameBoard[idx + 2] = 0;
+        }
+
+        // 모든 버튼 이미지 업데이트
+        for (int i = 0; i < 9; i++)
+        {
+            ChangeButtonImage(i);
+        }
+
+        // 승리 체크
+        CheckWhoWin(gameBoard);
+    }
+
+    // 라운드 리셋 함수
+    void ResetRound()
+    {
         for (int i = 0; i < gameBoard.Length; i++)
         {
             gameBoard[i] = 0;
             ChangeButtonImage(i);
         }
-
-        // 플래그 초기화
         isFirstWin = false;
         isSecondWin = false;
         isFinishRound = false;
+    }
 
-        // 턴 랜덤 선택
+    // 누가 이겼는지 확인
+    public void CheckWhoWin(int[] gameBoard)
+    {
+        // 가로 체크
+        if (GetGameBoardValue(0, 0) == GetGameBoardValue(0, 1) && GetGameBoardValue(0, 1) == GetGameBoardValue(0, 2) && GetGameBoardValue(0, 0) != 0)
+        {
+            if (GetGameBoardValue(0, 0) == 1)
+            {
+                Debug.Log("O가 이겼습니다!");
+                isFirstWin = true;
+                isFinishRound = true;
+            }
+            if (GetGameBoardValue(0, 0) == 2)
+            {
+                Debug.Log("X가 이겼습니다!");
+                isSecondWin = true;
+                isFinishRound = true;
+            }
+        }
+        else if (GetGameBoardValue(1, 0) == GetGameBoardValue(1, 1) && GetGameBoardValue(1, 1) == GetGameBoardValue(1, 2) && GetGameBoardValue(1, 0) != 0)
+        {
+            if (GetGameBoardValue(1, 0) == 1)
+            {
+                Debug.Log("O가 이겼습니다!");
+                isFirstWin = true;
+                isFinishRound = true;
+            }
+            if (GetGameBoardValue(1, 0) == 2)
+            {
+                Debug.Log("X가 이겼습니다!");
+                isSecondWin = true;
+                isFinishRound = true;
+            }
+        }
+        else if (GetGameBoardValue(2, 0) == GetGameBoardValue(2, 1) && GetGameBoardValue(2, 1) == GetGameBoardValue(2, 2) && GetGameBoardValue(2, 0) != 0)
+        {
+            if (GetGameBoardValue(2, 0) == 1)
+            {
+                Debug.Log("O가 이겼습니다!");
+                isFirstWin = true;
+                isFinishRound = true;
+            }
+            if (GetGameBoardValue(2, 0) == 2)
+            {
+                Debug.Log("X가 이겼습니다!");
+                isSecondWin = true;
+                isFinishRound = true;
+            }
+        }
+        // 세로 체크
+        else if (GetGameBoardValue(0, 0) == GetGameBoardValue(1, 0) && GetGameBoardValue(1, 0) == GetGameBoardValue(2, 0) && GetGameBoardValue(0, 0) != 0)
+        {
+            if (GetGameBoardValue(0, 0) == 1)
+            {
+                Debug.Log("O가 이겼습니다!");
+                isFirstWin = true;
+                isFinishRound = true;
+            }
+            if (GetGameBoardValue(0, 0) == 2)
+            {
+                Debug.Log("X가 이겼습니다!");
+                isSecondWin = true;
+                isFinishRound = true;
+            }
+        }
+        else if (GetGameBoardValue(0, 1) == GetGameBoardValue(1, 1) && GetGameBoardValue(1, 1) == GetGameBoardValue(2, 1) && GetGameBoardValue(0, 1) != 0)
+        {
+            if (GetGameBoardValue(0, 1) == 1)
+            {
+                Debug.Log("O가 이겼습니다!");
+                isFirstWin = true;
+                isFinishRound = true;
+            }
+            if (GetGameBoardValue(0, 1) == 2)
+            {
+                Debug.Log("X가 이겼습니다!");
+                isSecondWin = true;
+                isFinishRound = true;
+            }
+        }
+        else if (GetGameBoardValue(0, 2) == GetGameBoardValue(1, 2) && GetGameBoardValue(1, 2) == GetGameBoardValue(2, 2) && GetGameBoardValue(0, 2) != 0)
+        {
+            if (GetGameBoardValue(0, 2) == 1)
+            {
+                Debug.Log("O가 이겼습니다!");
+                isFirstWin = true;
+                isFinishRound = true;
+            }
+            if (GetGameBoardValue(0, 2) == 2)
+            {
+                Debug.Log("X가 이겼습니다!");
+                isSecondWin = true;
+                isFinishRound = true;
+            }
+        }
+        // 대각선 체크
+        else if (GetGameBoardValue(0, 0) == GetGameBoardValue(1, 1) && GetGameBoardValue(1, 1) == GetGameBoardValue(2, 2) && GetGameBoardValue(0, 0) != 0)
+        {
+            if (GetGameBoardValue(0, 0) == 1)
+            {
+                Debug.Log("O가 이겼습니다!");
+                isFirstWin = true;
+                isFinishRound = true;
+            }
+            if (GetGameBoardValue(0, 0) == 2)
+            {
+                Debug.Log("X가 이겼습니다!");
+                isSecondWin = true;
+                isFinishRound = true;
+            }
+        }
+        else if (GetGameBoardValue(0, 2) == GetGameBoardValue(1, 1) && GetGameBoardValue(1, 1) == GetGameBoardValue(2, 0) && GetGameBoardValue(0, 2) != 0)
+        {
+            if (GetGameBoardValue(0, 2) == 1)
+            {
+                Debug.Log("O가 이겼습니다!");
+                isFirstWin = true;
+                isFinishRound = true;
+            }
+            if (GetGameBoardValue(0, 2) == 2)
+            {
+                Debug.Log("X가 이겼습니다!");
+                isSecondWin = true;
+                isFinishRound = true;
+            }
+        }
+
+        // 게임이 끝났다면 (누가 이겼다면) 라운드 결과 처리
+        if (isFinishRound)
+        {
+            // 플레이어가 이긴 경우
+            if ((isImFirst && isFirstWin) || (!isImFirst && isSecondWin))
+            {
+                Debug.Log("플레이어가 라운드 승리!");
+
+                if (currentRound == 8)
+                {
+                    // 8라운드 승리 (최종 승리)
+                    ShowRoundEndDialogue(true, true);
+                    Debug.Log("최종 승리! 게임 클리어!");
+                    StartCoroutine(ShowFinalWinAndLoadIntro());
+                }
+                else
+                {
+                    // 일반 라운드 승리
+                    ShowRoundEndDialogue(true, false);
+                    currentRound++;
+                    RoundText.text = currentRound.ToString();
+                    StartCoroutine(WaitAndReset(3f)); // 3초 대기 후 다음 라운드
+                }
+            }
+            // 컴퓨터가 이긴 경우
+            else
+            {
+                Debug.Log("컴퓨터가 라운드 승리!");
+                ShowRoundEndDialogue(false, false);
+                StartCoroutine(ResetToRoundOne()); // 패배 후 1라운드로 리셋
+            }
+        }
+    }
+
+    // 최종 승리 후 3초 대기하고 WinScene 로드
+    IEnumerator ShowFinalWinAndLoadIntro()
+    {
+        yield return new WaitForSeconds(3f);
+        UnityEngine.SceneManagement.SceneManager.LoadScene("WinScene");
+    }
+
+    // 패배 후 3초 대기하고 1라운드로 리셋
+    IEnumerator ResetToRoundOne()
+    {
+        yield return new WaitForSeconds(3f);
+        currentRound = 1; // 라운드를 1로 리셋
+        RoundText.text = currentRound.ToString();
+        ResetRound();
+        ShowRoundStartDialogue(); // 새 라운드 시작 대사 표시
         int FirstTurn = Random.Range(1, 100);
         SetFirstTurn(FirstTurn);
-
-        // 라운드 시작 대사 표시
-        ShowRoundStartDialogue();
-
-        // 컴퓨터가 선공이면 컴퓨터 턴 시작
         if (!isImFirst)
         {
             ComputerTurn();
         }
-
-        Debug.Log("게임 보드가 초기화되었습니다.");
     }
 
-    // 딜레이 후 보드 초기화하는 코루틴
-    IEnumerator ResetBoardWithDelay()
+    // 대기 후 라운드 리셋
+    IEnumerator WaitAndReset(float seconds)
     {
-        yield return new WaitForSeconds(2.0f);
-        ResetBoard();
+        yield return new WaitForSeconds(seconds);
+        ResetRound();
+        ShowRoundStartDialogue(); // 새 라운드 시작 대사 표시
+        int FirstTurn = Random.Range(1, 100);
+        SetFirstTurn(FirstTurn);
+        if (!isImFirst)
+        {
+            ComputerTurn();
+        }
     }
 
-    // IEnumerator LoadWinSceneWithDelay()
-    // {
-    //     // 2초 대기 (승리 메시지를 볼 시간)
-    //     yield return new WaitForSeconds(2.0f);
-    //     UnityEngine.SceneManagement.SceneManager.LoadScene("WinScene");
-    // }
-
-
-    // 컴퓨터 체크로직
-    private bool IsWinningFor(int player)
+    // 특정 플레이어가 이긴 상태인지 확인하는 함수
+    bool IsWinningFor(int player)
     {
-
-        // 가로줄 확인
+        // 가로 체크
         if (GetGameBoardValue(0, 0) == GetGameBoardValue(0, 1) && GetGameBoardValue(0, 1) == GetGameBoardValue(0, 2) && GetGameBoardValue(0, 0) != 0)
         {
             if (GetGameBoardValue(0, 0) == player)
@@ -624,7 +1056,7 @@ public class TicTacToeScript : MonoBehaviour
                 return true;
             }
         }
-        // 세로줄 확인
+        // 세로 체크
         else if (GetGameBoardValue(0, 0) == GetGameBoardValue(1, 0) && GetGameBoardValue(1, 0) == GetGameBoardValue(2, 0) && GetGameBoardValue(0, 0) != 0)
         {
             if (GetGameBoardValue(0, 0) == player)
