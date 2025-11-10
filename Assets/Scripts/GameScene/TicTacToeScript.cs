@@ -155,6 +155,8 @@ public class TicTacToeScript : MonoBehaviour
     // 틱택토시 버튼 클릭
     public void OnButtonClick(int buttonIndex, bool isComputerMove = false)
     {
+        Debug.Log($"OnButtonClick 호출 - buttonIndex: {buttonIndex}, isComputerMove: {isComputerMove}, isMyTurn: {isMyTurn}, isImFirst: {isImFirst}, gameBoard[{buttonIndex}]: {gameBoard[buttonIndex]}");
+
         if (isFirstWin || isSecondWin)
         {
             Debug.Log("게임이 이미 종료되었습니다.");
@@ -1224,6 +1226,13 @@ public class TicTacToeScript : MonoBehaviour
     void Start()
     {
         Application.targetFrameRate = 60;
+
+        // 게임보드 초기화
+        for (int i = 0; i < gameBoard.Length; i++)
+        {
+            gameBoard[i] = 0;
+        }
+
         TurnText = GameObject.Find("TurnText");
         RoundText = GameObject.Find("RoundText").GetComponent<TextMeshProUGUI>();
         RobotText = GameObject.Find("RobotText").GetComponent<TextMeshProUGUI>(); // RobotText 찾기
