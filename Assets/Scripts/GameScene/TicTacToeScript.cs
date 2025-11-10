@@ -191,9 +191,30 @@ public class TicTacToeScript : MonoBehaviour
                 ComputerTurn();
             }
         }
+        else if (isComputerMove && gameBoard[buttonIndex] == 0) // 컴퓨터가 수를 둠
+        {
+            // isImFirst가 true면 컴퓨터는 2 (X), false면 컴퓨터는 1 (O)
+            if (isImFirst)
+            {
+                gameBoard[buttonIndex] = 2;
+            }
+            else
+            {
+                gameBoard[buttonIndex] = 1;
+            }
+            ChangeButtonImage(buttonIndex);
+            CheckWhoWin(gameBoard);
+            if (!isFinishRound) // Round가 끝나지 않았다면 계속하기.
+            {
+                changeTurn();
+            }
+        }
         else
         {
-            Debug.Log("이미 눌린 버튼입니다!!!!!!");
+            if (!isComputerMove)
+            {
+                Debug.Log("이미 눌린 버튼입니다!!!!!!");
+            }
         }
     }
 
